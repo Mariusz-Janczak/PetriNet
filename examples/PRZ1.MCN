@@ -1,0 +1,44 @@
+ Macronet structure.
+---------------------
+
+TRANSITIONS
+T1: MP107 |- @MP101 * @MP102 * @MP106;
+T4: MP101 * MP102 |- @MP103 * @MP104 * @MP105;
+T10: MP104 * MP105 * MP106 |- @P14;
+T11: P14 * MP103 |- @MP107;
+
+MACROPLACE 101
+    Internal places      : P2,P4
+    Internal transitions : T2
+    Border transitions   : T1,T4
+
+MACROPLACE 102
+    Internal places      : P3,P5
+    Internal transitions : T3
+    Border transitions   : T1,T4
+
+MACROPLACE 103
+    Internal places      : P7,P8
+    Internal transitions : T6,T5
+    Border transitions   : T4,T11
+
+MACROPLACE 104
+    Internal places      : P9,P11
+    Internal transitions : T7
+    Border transitions   : T4,T10
+
+MACROPLACE 105
+    Internal places      : P10,P12
+    Internal transitions : T8
+    Border transitions   : T4,T10
+
+MACROPLACE 106
+    Internal places      : P6,P13
+    Internal transitions : T9
+    Border transitions   : T1,T10
+
+MACROPLACE 107
+    Internal places      : P1,P15,P16
+    Internal transitions : T13,T12
+    Border transitions   : T1,T11
+

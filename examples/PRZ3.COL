@@ -1,0 +1,17 @@
+ Coloured net.
+---------------
+
+COLOR:  1,   PLACE: P1,P2,P3
+COLOR:  2,   PLACE: P4,P5,P6
+
+ESSENTIAL PLACES: P1,P2,P3,P4,P5,P6
+
+TRANSITIONS
+T1: P1[1] * P4[2] * X1 |- @P2[1] * @P5[2] * SY1 * SY2;
+T2: P2[1] * X2 |- @P3[1] * RY1 * SY3;
+T3: P3[1] * X4 |- @P1[1] * RY3;
+T4: P5[2] * X3 |- @P6[2] * RY2 * SY4;
+T5: P6[2] * X5 |- @P4[2] * RY4;
+
+OUTPUTS
+P1[1] |- Y5;

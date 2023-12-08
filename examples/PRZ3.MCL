@@ -1,0 +1,11 @@
+ Coloured macronet.
+--------------------
+
+COLOR:  1,   PLACE: MP101
+COLOR:  2,   PLACE: MP102
+
+ESSENTIAL PLACES: MP101,MP102
+
+TRANSITIONS
+T1: MP101[1] * MP102[2] |- @MP101[1] * @MP102[2];
+
