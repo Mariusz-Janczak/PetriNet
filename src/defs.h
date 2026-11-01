@@ -3,10 +3,7 @@
 
 #define items(x) (sizeof(x) / sizeof(*(x)))
 
-#define true (1)
-#define false (0)
-
-#define nil NULL
+#define nil nullptr
 
 typedef bool boolean;
 typedef int integer;

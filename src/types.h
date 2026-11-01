@@ -5,7 +5,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <set>
+#include <bitset>
+#include <initializer_list>
 
 #include "defs.h"
 
@@ -41,7 +42,57 @@ namespace types {
     initial_code_reset
   } ptnet_encoding_init_t;
 
-  typedef std::set<int> ptnet_places_t;
+  /*
+   * Equivalent of Pascal "set of 1..255" (TPlace). Operators follow Pascal
+   * semantics: + union, - difference, * intersection, <= subset.
+   * Iteration yields the elements in ascending order.
+   */
+  class ptnet_places_t {
+  public:
+    static constexpr int max = 255;
+
+    class const_iterator {
+    public:
+      const_iterator(const std::bitset<max + 1>& bits, int pos) : bits(bits), pos(pos) { skip(); }
+      int operator*() const { return pos; }
+      const_iterator& operator++() { pos++; skip(); return *this; }
+      bool operator==(const const_iterator& other) const { return pos == other.pos; }
+      bool operator!=(const const_iterator& other) const { return pos != other.pos; }
+    private:
+      void skip() { while ((pos <= max) && !bits.test(pos)) pos++; }
+      const std::bitset<max + 1>& bits;
+      int pos;
+    };
+
+    ptnet_places_t() = default;
+    ptnet_places_t(std::initializer_list<int> items) { for (int i : items) bits.set(i); }
+
+    bool has(int i) const { return bits.test(i); }
+    bool empty() const { return bits.none(); }
+    size_t size() const { return bits.count(); }
+    void insert(int i) { bits.set(i); }
+    void erase(int i) { bits.reset(i); }
+    void clear() { bits.reset(); }
+
+    const_iterator begin() const { return const_iterator(bits, 0); }
+    const_iterator end() const { return const_iterator(bits, max + 1); }
+
+    bool operator==(const ptnet_places_t& other) const { return bits == other.bits; }
+    bool operator!=(const ptnet_places_t& other) const { return bits != other.bits; }
+    bool operator<=(const ptnet_places_t& other) const { return (bits & ~other.bits).none(); }
+    bool operator>=(const ptnet_places_t& other) const { return other <= *this; }
+
+    ptnet_places_t operator+(const ptnet_places_t& other) const { return ptnet_places_t(bits | other.bits); }
+    ptnet_places_t operator-(const ptnet_places_t& other) const { return ptnet_places_t(bits & ~other.bits); }
+    ptnet_places_t operator*(const ptnet_places_t& other) const { return ptnet_places_t(bits & other.bits); }
+    ptnet_places_t& operator+=(const ptnet_places_t& other) { bits |= other.bits; return *this; }
+    ptnet_places_t& operator-=(const ptnet_places_t& other) { bits &= ~other.bits; return *this; }
+    ptnet_places_t& operator*=(const ptnet_places_t& other) { bits &= other.bits; return *this; }
+
+  private:
+    explicit ptnet_places_t(const std::bitset<max + 1>& bits) : bits(bits) {}
+    std::bitset<max + 1> bits;
+  };
 
   typedef struct ptnet_input_data_s {
     ptnet_places_t Plc;
@@ -63,29 +114,32 @@ namespace types {
   } ptnet_register_t;
   typedef std::vector<ptnet_register_t> ptnet_registers_list_t;
 
-  //typedef ptnet_tree_t* PTree;
+  /*
+   * Reachability graph (TBranch/TTree/TAddress in typy.pas). Nodes are kept
+   * in a vector in creation order and arcs refer to them by index, so the
+   * vector may grow while the graph is being built.
+   */
+  typedef struct ptnet_arc_s {
+    size_t transition; /* index into the transitions list the graph was built from */
+    size_t branch;     /* index of the target node in the branches list */
+  } ptnet_arc_t;
 
   typedef struct ptnet_branch_s {
     ptnet_places_t MrkPlc;
-    //PTree RdyTrn;
+    std::vector<ptnet_arc_t> RdyTrn;
   } ptnet_branch_t;
   typedef std::vector<ptnet_branch_t> ptnet_branches_list_t;
 
-  typedef struct ptnet_tree_s {
-    ptnet_transition_t& TranNr;
-    ptnet_branch_t& Branch;
-  } ptnet_tree_t;
-  typedef std::vector<ptnet_tree_t> ptnet_tree_list_t;
-
+  /* Arrays below are sized so that the original Pascal indices can be used. */
   struct REssencialPlc {
-    std::byte Nr;
+    int Nr;
     bool Rep;
   };
-  typedef REssencialPlc TEssencialPlc[100];
+  typedef REssencialPlc TEssencialPlc[101]; /* [1..100] */
 
-  typedef ptnet_places_t TContents[100];
+  typedef ptnet_places_t TContents[200]; /* [101..199] */
 
-  typedef ptnet_places_t TPalete[50];
+  typedef ptnet_places_t TPalete[51]; /* [1..50] */
 
   typedef std::string TCiag;
 
@@ -94,13 +148,13 @@ namespace types {
   typedef std::string TExtension;
 
   struct RComp {
-    std::byte Plc;
+    int Plc;
     bool EssPlc;
   };
-  typedef RComp TComp[21];
+  typedef RComp TComp[21]; /* [0..20] */
 
   struct TPlc {
-    std::byte Plc;
+    int Plc;
     ptnet_places_t D;
   };
 
@@ -108,7 +162,7 @@ namespace types {
   struct TCompAut {
     TComp Plc;
     TPlc D;
-    std::byte CondNr, ColNr;
+    int CondNr, ColNr;
     int MinFF, MaxFF;
     bool Roz;
     ptnet_places_t inp_, Reg, Comb;
@@ -119,8 +173,8 @@ namespace types {
 
   typedef struct TContMc* PContMc;
   struct TContMc {
-    std::byte McNr;
-    std::byte Price;
+    int McNr;
+    int Price;
     ptnet_places_t ContMc;
     PContMc Next;
   };
@@ -133,22 +187,22 @@ namespace types {
 
   typedef struct TConcurrency* PConcurrency;
   struct TConcurrency {
-    std::byte McNr;
+    int McNr;
     ptnet_places_t ConcMc;
     PConcurrency Next;
   };
 
   typedef struct TNonconcurrency* PNonconcurrency;
   struct TNonconcurrency {
-    std::byte McNr;
+    int McNr;
     ptnet_places_t NoncMc;
     PNonconcurrency Next;
   };
 
   typedef struct TVerified* PVerified;
   struct TVerified {
-    std::byte IncLev;
-    std::byte UniteNr;
+    int IncLev;
+    int UniteNr;
     ptnet_places_t UniteMc;
     ptnet_places_t NoncMc;
     PVerified Next;
@@ -156,22 +210,22 @@ namespace types {
 
   typedef struct TFlipFlop* PFlipFlop;
   struct TFlipFlop {
-    std::byte FFNr;
+    int FFNr;
     char Ch;
     PFlipFlop Next;
   };
 
   typedef struct TCodes* PCodes;
   struct TCodes {
-    std::byte PlcNr;
-    std::byte McNr;
+    int PlcNr;
+    int McNr;
     PFlipFlop PlcCode;
     PCodes Next;
   };
 
   typedef struct TListCodes* PListCodes;
   struct TListCodes {
-    std::byte PlcNr;
+    int PlcNr;
     std::string StrCod;
     PListCodes Next;
   };

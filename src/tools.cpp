@@ -52,7 +52,7 @@ namespace tools {
     size_t size = 0;
 
     number = std::stoi(data.substr(pos), &size);
-    if (size == 0)
+    if ((size == 0) || (number < 0) || (number > ptnet_places_t::max))
     {
       std::cerr << "Place missformat: " << data << endl;
       error = DATA_FILE_PARSE_ERROR;
@@ -305,14 +305,13 @@ namespace tools {
 
     for (ptnet_transitions_list_t::iterator it = petrinet.net.begin(); it != petrinet.net.end(); it++)
     {
-      AllPlc.insert(it->InpPlc.begin(), it->InpPlc.end());
-      AllPlc.insert(it->OutPlc.begin(), it->OutPlc.end());
-      AllInp.insert(it->Inp.begin(), it->Inp.end());
-      AllReg.insert(it->Out.begin(), it->Out.end());
+      AllPlc += it->InpPlc + it->OutPlc;
+      AllInp += it->Inp;
+      AllReg += it->Out;
     }
     for (ptnet_registers_list_t::iterator it = petrinet.reg.begin(); it != petrinet.reg.end(); it++)
     {
-      AllCom.insert(it->Out.begin(), it->Out.end());
+      AllCom += it->Out;
     }
     if ((AllPlc != petrinet.input_data.Plc) || (AllInp != petrinet.input_data.Inp) || (AllReg != petrinet.input_data.Reg) || (AllCom != petrinet.input_data.Com))
     {
