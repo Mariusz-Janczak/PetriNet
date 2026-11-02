@@ -60,6 +60,19 @@ namespace tools {
     return error;
   }
 
+  /* Fixed: the original did not check place numbers; above ptnet_places_max they collide with macroplaces. */
+  static ptnet_file_error_t ptnetCheckPlaceNumber(const std::string& data, int number)
+  {
+    ptnet_file_error_t error = DATA_FILE_OK;
+
+    if ((number < 1) || (number > ptnet_places_max))
+    {
+      std::cerr << "Place number out of range 1.." << ptnet_places_max << ": " << data << endl;
+      error = DATA_FILE_PARSE_ERROR;
+    }
+    return error;
+  }
+
   static ptnet_file_error_t ptnetParseNumber(std::string& data, char prefix, int& number)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
@@ -84,6 +97,10 @@ namespace tools {
     if (data[0] == 'P')
     {
       error = ptnetGetNumber(data, 1UL, number);
+      if (!error)
+      {
+        error = ptnetCheckPlaceNumber(data, number);
+      }
       if (!error)
       {
         trans.input_places.insert(number);
@@ -117,6 +134,10 @@ namespace tools {
     if ((data[0] == '@') && (data[1] == 'P'))
     {
       error = ptnetGetNumber(data, 2UL, number);
+      if (!error)
+      {
+        error = ptnetCheckPlaceNumber(data, number);
+      }
       if (!error)
       {
         trans.output_places.insert(number);
@@ -205,6 +226,10 @@ namespace tools {
       error = ptnetGetNumber(data, 1UL, number);
       if (!error)
       {
+        error = ptnetCheckPlaceNumber(data, number);
+      }
+      if (!error)
+      {
         output.places.insert(number);
       }
     }
@@ -290,6 +315,10 @@ namespace tools {
       int number = 0;
 
       error = ptnetParseNumber(item, prefix, number);
+      if (!error && (prefix == 'P'))
+      {
+        error = ptnetCheckPlaceNumber(item, number);
+      }
       if (!error)
       {
         places.insert(number);

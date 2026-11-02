@@ -30,6 +30,7 @@ There is no test suite. Verify changes by running a command against [examples/](
 
 - Only `tools.cpp`, `graph.cpp` and `petri.cpp` are compiled; the other modules are commented out in `SOURCES`/`HEADERS` in [CMakeLists.txt](CMakeLists.txt). `automat.cpp`, `colored.cpp`, `colored1.cpp` and `encoding.cpp` are still near-literal Pascal translations (`byte`, `boolean`, `nil`, linked lists with `->Next`, `FNameStr`) and do not compile yet. To bring a module online, convert it to the new types and uncomment it there.
 - The `graph` module (reachability graph and macronet) is fully ported. Most of the pipeline in `PetriNet::Coloring/Decomposition/Encoding` is disabled with `#if 0` blocks that still use the old free-function signatures; they show the intended call order.
+- Bugs of the original are fixed only where the reference outputs stay identical; each deliberate deviation is marked with a `Fixed:` comment explaining the original behaviour.
 - The order of list elements matters for matching the reference outputs: many Pascal lists were built by prepending (`New^.Next := List; List := New`), so a straight `push_back` port reverses them (see `ReadyTrn` in `graph.cpp`).
 
 ## Architecture

@@ -163,8 +163,7 @@ namespace graph {
       }
       else
       {
-        /* As in the original, a following output place clears the unsafe flag again. */
-        unsafe = false;
+        /* Fixed: the original cleared the unsafe flag here, so a later output place hid it. */
         new_marking.insert(place);
       }
     }
@@ -301,8 +300,8 @@ namespace graph {
       file << "    Internal places      : ";
       for (int place : contents)
       {
-        /* As in the original, place 100 is not listed. */
-        if (place < ptnet_places_max)
+        /* Fixed: the original did not list place 100. */
+        if (place <= ptnet_places_max)
         {
           file << separator << 'P' << place;
           separator = ",";
@@ -405,8 +404,8 @@ namespace graph {
     int input = *transfer.input_places.begin();
     int output = *transfer.output_places.begin();
 
-    /* As in the original, place 100 is not treated as an ordinary place here. */
-    if ((input < ptnet_places_max) && (output < ptnet_places_max))
+    /* Fixed: the original treated place 100 as a macroplace here. */
+    if ((input <= ptnet_places_max) && (output <= ptnet_places_max))
     {
       /* Two ordinary places make a new macroplace. */
       int macroplace = ++petrinet.last_macroplace;
@@ -435,7 +434,6 @@ namespace graph {
           marking.erase(removed);
           marking.insert(kept);
         }
-        /* As in the original, the marking is not renumbered. */
         for (int macroplace = removed + 1; macroplace <= petrinet.last_macroplace; macroplace++)
         {
           ptnetReplacePlace(petrinet.macronet, macroplace, macroplace - 1, dead, unsafe);
@@ -443,6 +441,12 @@ namespace graph {
         for (int macroplace = removed + 1; macroplace <= petrinet.last_macroplace; macroplace++)
         {
           contents[macroplace - 1] = contents[macroplace];
+          /* Fixed: the original did not renumber the marking. */
+          if (marking.has(macroplace))
+          {
+            marking.erase(macroplace);
+            marking.insert(macroplace - 1);
+          }
         }
         contents[petrinet.last_macroplace].clear();
         petrinet.last_macroplace--;
