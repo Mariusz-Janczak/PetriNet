@@ -25,7 +25,7 @@ public:
   ptnet_file_error_t file_status;
   ptnet_input_data_t input_data;
   ptnet_transitions_list_t net, macronet, transfers;
-  ptnet_registers_list_t reg;
+  ptnet_outputs_list_t outputs;  /* OUTPUTS section */
   ptnet_branches_list_t branches, macronet_branches;
   ptnet_markings_list_t reachable_markings; /* markings of the most recently built graph */
   ptnet_places_t net_marking, macronet_marking, macronet_places;

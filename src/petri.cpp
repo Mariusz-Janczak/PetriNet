@@ -177,11 +177,11 @@ void PetriNet::Coloring(bool /*macro*/)
         if (What == 1) /* Kolorowanie sieci */
         {
           WhichColor(McColor, ColorsNr, contents, LastMacro, Color);
-          WriteColored(fname, Net, Color, ColorsNr, What, Reg, false);
+          WriteColored(fname, Net, Color, ColorsNr, What, outputs, false);
         }
         else /* Kolorowanie makrosieci */
         {
-          WriteColored(fname, macronet, McColor, ColorsNr, What, Reg, true);
+          WriteColored(fname, macronet, McColor, ColorsNr, What, outputs, true);
         }
         OpenEditor(fname, true);
       }
@@ -234,7 +234,7 @@ void PetriNet::Decomposition(void)
       {
         Coloring(macronet_branches, McColor, ColorsNr);
         WhichColor(McColor, ColorsNr, contents, LastMacro, Color);
-        Automats(fname, input_data, Net, Reg, Marking, Color, ColorsNr, What);
+        Automats(fname, input_data, Net, outputs, Marking, Color, ColorsNr, What);
         OpenEditor(fname, true);
       }
       else
@@ -334,7 +334,7 @@ void PetriNet::Encoding(void)
           ptnetWriteResultFile(ByteStr, 7, WrResF);
           if (WrResF)
           {
-            WriteSeq(fname, Net, Reg, input_data, Marking, ListCodes);
+            WriteSeq(fname, Net, outputs, input_data, Marking, ListCodes);
             OpenEditor(fname, true);
           }
         }

@@ -86,7 +86,7 @@ namespace tools {
       error = ptnetGetNumber(data, 1UL, number);
       if (!error)
       {
-        trans.InpPlc.insert(number);
+        trans.input_places.insert(number);
       }
     }
     else if (data[0] == 'X')
@@ -94,7 +94,7 @@ namespace tools {
       error = ptnetGetNumber(data, 1UL, number);
       if (!error)
       {
-        trans.Inp.insert(number);
+        trans.input_signals.insert(number);
       }
     }
     else if ((data[0] == '/') && (data[1] == 'X'))
@@ -102,8 +102,8 @@ namespace tools {
       error = ptnetGetNumber(data, 2UL, number);
       if (!error)
       {
-        trans.Inp.insert(number);
-        trans.InpN.insert(number);
+        trans.input_signals.insert(number);
+        trans.negated_inputs.insert(number);
       }
     }
     return error;
@@ -119,7 +119,7 @@ namespace tools {
       error = ptnetGetNumber(data, 2UL, number);
       if (!error)
       {
-        trans.OutPlc.insert(number);
+        trans.output_places.insert(number);
       }
     }
     else if ((data[0] == 'S') && (data[1] == 'Y'))
@@ -127,7 +127,7 @@ namespace tools {
       error = ptnetGetNumber(data, 2UL, number);
       if (!error)
       {
-        trans.Out.insert(number);
+        trans.output_signals.insert(number);
       }
     }
     else if ((data[0] == 'R') && (data[1] == 'Y'))
@@ -135,8 +135,8 @@ namespace tools {
       error = ptnetGetNumber(data, 2UL, number);
       if (!error)
       {
-        trans.Out.insert(number);
-        trans.OutR.insert(number);
+        trans.output_signals.insert(number);
+        trans.reset_outputs.insert(number);
       }
     }
     return error;
@@ -186,7 +186,7 @@ namespace tools {
     ptnet_file_error_t error = DATA_FILE_OK;
     ptnet_transition_t trans;
 
-    trans.Nr = number;
+    trans.number = number;
     error = ptnetParseTransitionSequence(ptnetRemoveSpaces(data), trans);
     if (!error)
     {
@@ -195,7 +195,7 @@ namespace tools {
     return error;
   }
 
-  static ptnet_file_error_t ptnetParseRegisterInput(std::string& data, ptnet_register_t& regis)
+  static ptnet_file_error_t ptnetParseOutputPlace(std::string& data, ptnet_output_t& output)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
     int number = 0;
@@ -205,13 +205,13 @@ namespace tools {
       error = ptnetGetNumber(data, 1UL, number);
       if (!error)
       {
-        regis.Plc.insert(number);
+        output.places.insert(number);
       }
     }
     return error;
   }
 
-  static ptnet_file_error_t ptnetParseRegisterOutput(std::string& data, ptnet_register_t& regis)
+  static ptnet_file_error_t ptnetParseOutputSignal(std::string& data, ptnet_output_t& output)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
     int number = 0;
@@ -221,13 +221,13 @@ namespace tools {
       error = ptnetGetNumber(data, 1UL, number);
       if (!error)
       {
-        regis.Out.insert(number);
+        output.outputs.insert(number);
       }
     }
     return error;
   }
 
-  static ptnet_file_error_t ptnetParseRegisterInputsOutputs(std::string& data, ptnet_register_t& regis, bool input)
+  static ptnet_file_error_t ptnetParseOutputPlacesSignals(std::string& data, ptnet_output_t& output, bool input)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
     std::stringstream ss(data);
@@ -237,17 +237,17 @@ namespace tools {
     {
       if (input)
       {
-        error = ptnetParseRegisterInput(item, regis);
+        error = ptnetParseOutputPlace(item, output);
       }
       else
       {
-        error = ptnetParseRegisterOutput(item, regis);
+        error = ptnetParseOutputSignal(item, output);
       }
     }
     return error;
   }
 
-  static ptnet_file_error_t ptnetParseOutputSequence(std::string& data, ptnet_register_t& regis)
+  static ptnet_file_error_t ptnetParseOutputSequence(std::string& data, ptnet_output_t& output)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
     size_t pos = data.find("|-");
@@ -257,24 +257,24 @@ namespace tools {
       std::string inputs = data.substr(0UL, pos);
       std::string outputs = data.substr(pos + 2);
 
-      error = ptnetParseRegisterInputsOutputs(inputs, regis, true);
+      error = ptnetParseOutputPlacesSignals(inputs, output, true);
       if (!error)
       {
-        error = ptnetParseRegisterInputsOutputs(outputs, regis, false);
+        error = ptnetParseOutputPlacesSignals(outputs, output, false);
       }
     }
     return error;
   }
 
-  static ptnet_file_error_t ptnetParseOutput(std::string& data, ptnet_registers_list_t& Reg)
+  static ptnet_file_error_t ptnetParseOutput(std::string& data, ptnet_outputs_list_t& outputs)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
-    ptnet_register_t regis;
+    ptnet_output_t output;
 
-    error = ptnetParseOutputSequence(ptnetRemoveSpaces(data), regis);
+    error = ptnetParseOutputSequence(ptnetRemoveSpaces(data), output);
     if (!error)
     {
-      Reg.push_back(regis);
+      outputs.push_back(output);
     }
     return error;
   }
@@ -301,19 +301,19 @@ namespace tools {
   static ptnet_file_error_t ptnetVerifyNetPlaces(PetriNet& petrinet)
   {
     ptnet_file_error_t error = DATA_FILE_OK;
-    ptnet_places_t AllPlc, AllInp, AllReg, AllCom;
+    ptnet_places_t all_places, all_inputs, all_registered_outputs, all_combinational_outputs;
 
     for (ptnet_transitions_list_t::iterator it = petrinet.net.begin(); it != petrinet.net.end(); it++)
     {
-      AllPlc += it->InpPlc + it->OutPlc;
-      AllInp += it->Inp;
-      AllReg += it->Out;
+      all_places += it->input_places + it->output_places;
+      all_inputs += it->input_signals;
+      all_registered_outputs += it->output_signals;
     }
-    for (ptnet_registers_list_t::iterator it = petrinet.reg.begin(); it != petrinet.reg.end(); it++)
+    for (ptnet_outputs_list_t::iterator it = petrinet.outputs.begin(); it != petrinet.outputs.end(); it++)
     {
-      AllCom += it->Out;
+      all_combinational_outputs += it->outputs;
     }
-    if ((AllPlc != petrinet.input_data.Plc) || (AllInp != petrinet.input_data.Inp) || (AllReg != petrinet.input_data.Reg) || (AllCom != petrinet.input_data.Com))
+    if ((all_places != petrinet.input_data.places) || (all_inputs != petrinet.input_data.inputs) || (all_registered_outputs != petrinet.input_data.registered_outputs) || (all_combinational_outputs != petrinet.input_data.combinational_outputs))
     {
       std::cerr << "Inconsistent data found" << endl;
       error = DATA_INCONSISTENT;
@@ -372,7 +372,7 @@ namespace tools {
         }
         else if (section_data == 2)
         {
-          error = ptnetParseOutput(line, petrinet.reg);
+          error = ptnetParseOutput(line, petrinet.outputs);
         }
         else /* Single line defines */
         {
@@ -385,19 +385,19 @@ namespace tools {
 
             if (key == "PLACES")
             {
-              error = ptnetParsePlaces(data, 'P', petrinet.input_data.Plc);
+              error = ptnetParsePlaces(data, 'P', petrinet.input_data.places);
             }
             else if (key == "INPUTS")
             {
-              error = ptnetParsePlaces(data, 'X', petrinet.input_data.Inp);
+              error = ptnetParsePlaces(data, 'X', petrinet.input_data.inputs);
             }
             else if (key == "REG_OUTS")
             {
-              error = ptnetParsePlaces(data, 'Y', petrinet.input_data.Reg);
+              error = ptnetParsePlaces(data, 'Y', petrinet.input_data.registered_outputs);
             }
             else if (key == "COMB_OUTS")
             {
-              error = ptnetParsePlaces(data, 'Y', petrinet.input_data.Com);
+              error = ptnetParsePlaces(data, 'Y', petrinet.input_data.combinational_outputs);
             }
             else if (key == "MARKINGS")
             {

@@ -107,7 +107,7 @@ namespace graph {
       position = (position < 39) ? 39 : position + 1;
       for (const ptnet_arc_t& arc : branches[b].arcs)
       {
-        ptnetOverwriteText(line, position, std::to_string(transitions[arc.transition].Nr));
+        ptnetOverwriteText(line, position, std::to_string(transitions[arc.transition].number));
         position = 48;
         ptnetWritePlaces(branches[arc.branch].marking, line, position);
         position = 39;
@@ -143,7 +143,7 @@ namespace graph {
     /* The original prepends enabled transitions to the list, so they are collected in reverse order. */
     for (size_t t = transitions.size(); t-- > 0; )
     {
-      if (transitions[t].InpPlc <= branch.marking)
+      if (transitions[t].input_places <= branch.marking)
       {
         branch.arcs.push_back({ t, 0 });
       }
@@ -152,9 +152,9 @@ namespace graph {
 
   static void ptnetFireTransition(const ptnet_transition_t& transition, const ptnet_places_t& old_marking, ptnet_places_t& new_marking, bool& unsafe, bool& dead)
   {
-    new_marking = old_marking - transition.InpPlc;
+    new_marking = old_marking - transition.input_places;
     unsafe = false;
-    for (int place : transition.OutPlc)
+    for (int place : transition.output_places)
     {
       if (new_marking.has(place))
       {
@@ -276,10 +276,10 @@ namespace graph {
     Plik << "TRANSITIONS" << NL;
     while (DMcNet != nil)
     {
-      Plik << 'T' << DMcNet->Nr << ": ";
+      Plik << 'T' << DMcNet->number << ": ";
       Start = true;
       for (I = 0; I <= ptnet_macroplace_last; I++)
-        if (DMcNet->InpPlc.has(I))
+        if (DMcNet->input_places.has(I))
         {
           if (!Start)  Plik << " * ";
           else Start = false;
@@ -289,7 +289,7 @@ namespace graph {
       Plik << " |- ";
       Start = true;
       for (I = 0; I <= ptnet_macroplace_last; I++)
-        if (DMcNet->OutPlc.has(I))
+        if (DMcNet->output_places.has(I))
         {
           if (!Start)  Plik << " * ";
           else Start = false;
@@ -322,11 +322,11 @@ namespace graph {
       while (DTransfer != nil)
       {
         for (J = 0; J <= ptnet_places_max; J++)
-          if ((DTransfer->InpPlc.has(J)) && (contents[I].has(J)))
-            if (!Start)  Plik << ",T" << DTransfer->Nr;
+          if ((DTransfer->input_places.has(J)) && (contents[I].has(J)))
+            if (!Start)  Plik << ",T" << DTransfer->number;
             else
             {
-              Plik << 'T' << DTransfer->Nr;
+              Plik << 'T' << DTransfer->number;
               Start = false;
             }
         DTransfer = DTransfer->NextTrn;
@@ -337,11 +337,11 @@ namespace graph {
       DMcNet = macronet;
       while (DMcNet != nil)
       {
-        if ((DMcNet->InpPlc.has(I)) || (DMcNet->OutPlc.has(I)))
-          if (!Start)  Plik << ",T" << DMcNet->Nr;
+        if ((DMcNet->input_places.has(I)) || (DMcNet->output_places.has(I)))
+          if (!Start)  Plik << ",T" << DMcNet->number;
           else
           {
-            Plik << 'T' << DMcNet->Nr;
+            Plik << 'T' << DMcNet->number;
             Start = false;
           }
         DMcNet = DMcNet->NextTrn;
@@ -366,8 +366,8 @@ namespace graph {
 
   static bool IsTransfer(ptnet_transition_t& trans)
   {
-    std::cout << "Checking transition nr=" << trans.Nr << ", inputs=" << trans.InpPlc.size() << ", outputs=" << (trans.OutPlc.size() == 1) << endl;
-    return ((trans.InpPlc.size() == 1) && (trans.OutPlc.size() == 1));
+    std::cout << "Checking transition nr=" << trans.number << ", inputs=" << trans.input_places.size() << ", outputs=" << (trans.output_places.size() == 1) << endl;
+    return ((trans.input_places.size() == 1) && (trans.output_places.size() == 1));
   }
 #if 0
   static void AddMcPlc(ptnet_transitions_list_t macronet, ptnet_transitions_list_t transfers, ptnet_places_t& macronet_marking, integer& LastMacro, TContents& contents, boolean& dead, boolean& Danger);
@@ -379,19 +379,19 @@ namespace graph {
     if (Repl != Subs)
       while (macronet != nil)
       {
-        if (macronet->InpPlc.has(Repl))
-          if ((!(macronet->InpPlc.has(Subs))) ||
-            (macronet->InpPlc == macronet->OutPlc))
-            macronet->InpPlc = macronet->InpPlc - set::of(Repl, eos) + set::of(Subs, eos);
+        if (macronet->input_places.has(Repl))
+          if ((!(macronet->input_places.has(Subs))) ||
+            (macronet->input_places == macronet->output_places))
+            macronet->input_places = macronet->input_places - set::of(Repl, eos) + set::of(Subs, eos);
           else
           {
             dead = true;
             Danger = true;
           }
-        if (macronet->OutPlc.has(Repl))
-          if ((!(macronet->OutPlc.has(Subs))) ||
-            (macronet->InpPlc == macronet->OutPlc))
-            macronet->OutPlc = macronet->OutPlc - set::of(Repl, eos) + set::of(Subs, eos);
+        if (macronet->output_places.has(Repl))
+          if ((!(macronet->output_places.has(Subs))) ||
+            (macronet->input_places == macronet->output_places))
+            macronet->output_places = macronet->output_places - set::of(Repl, eos) + set::of(Subs, eos);
           else
           {
             dead = true;
@@ -408,8 +408,8 @@ namespace graph {
 
     for (I = 1; I <= ptnet_places_t::max; I++)
     {
-      if (transfers->InpPlc.has(I))  inp_ = I;
-      if (transfers->OutPlc.has(I))  Out = I;
+      if (transfers->input_places.has(I))  inp_ = I;
+      if (transfers->output_places.has(I))  Out = I;
     }
     /* As in the original, place 100 is not treated as an ordinary place here. */
     if ((inp_ < ptnet_places_max) && (Out < ptnet_places_max))
@@ -469,10 +469,10 @@ namespace graph {
 
   static void AddTrn(ptnet_transitions_list_t Trns, ptnet_transitions_list_t Net, ptnet_transitions_list_t& transfers)
   {
-    while ((Net->Nr != Trns->Nr) && (Net != nil))
+    while ((Net->number != Trns->number) && (Net != nil))
       Net = Net->NextTrn;
-    Trns->InpPlc = Net->InpPlc;
-    Trns->OutPlc = Net->OutPlc;
+    Trns->input_places = Net->input_places;
+    Trns->output_places = Net->output_places;
     Trns->NextTrn = transfers;
     transfers = Trns;
   }
@@ -482,7 +482,7 @@ namespace graph {
     macronet_places = set::of(eos);
     while (Trns != nil)
     {
-      macronet_places = macronet_places + Trns->InpPlc;
+      macronet_places = macronet_places + Trns->input_places;
       Trns = Trns->NextTrn;
     }
   }
@@ -499,9 +499,9 @@ namespace graph {
     for (ptnet_transitions_list_t::iterator it = petrinet.net.begin(); it != petrinet.net.end(); it++)
     {
       ptnet_transition_t trans;
-      trans.Nr = it->Nr;
-      trans.InpPlc = it->InpPlc;
-      trans.OutPlc = it->OutPlc;
+      trans.number = it->number;
+      trans.input_places = it->input_places;
+      trans.output_places = it->output_places;
       petrinet.macronet.push_back(trans);
     }
 

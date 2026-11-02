@@ -102,25 +102,32 @@ namespace types {
     std::bitset<max + 1> bits;
   };
 
+  /* Declarations from the header sections of the input file. */
   typedef struct ptnet_input_data_s {
-    ptnet_places_t Plc;
-    ptnet_places_t Inp;
-    ptnet_places_t Reg;
-    ptnet_places_t Com;
+    ptnet_places_t places;                 /* PLACES */
+    ptnet_places_t inputs;                 /* INPUTS */
+    ptnet_places_t registered_outputs;     /* REG_OUTS */
+    ptnet_places_t combinational_outputs;  /* COMB_OUTS */
   } ptnet_input_data_t;
 
+  /* Transition, e.g. "T2: P2 * /X2 |- @P3 * RY1 * SY3". */
   typedef struct ptnet_transition_s {
-    int Nr;
-    ptnet_places_t InpPlc, Inp, InpN;
-    ptnet_places_t OutPlc, Out, OutR;
+    int number;
+    ptnet_places_t input_places;    /* P2 */
+    ptnet_places_t input_signals;   /* all input conditions, X and /X */
+    ptnet_places_t negated_inputs;  /* /X2 */
+    ptnet_places_t output_places;   /* @P3 */
+    ptnet_places_t output_signals;  /* all registered outputs, SY and RY */
+    ptnet_places_t reset_outputs;   /* RY1 */
   } ptnet_transition_t;
   typedef std::vector<ptnet_transition_t> ptnet_transitions_list_t;
 
-  typedef struct ptnet_register_s {
-    ptnet_places_t Plc;
-    ptnet_places_t Out;
-  } ptnet_register_t;
-  typedef std::vector<ptnet_register_t> ptnet_registers_list_t;
+  /* Line of the OUTPUTS section, e.g. "P3 |- Y2". */
+  typedef struct ptnet_output_s {
+    ptnet_places_t places;
+    ptnet_places_t outputs;  /* combinational outputs active in these places */
+  } ptnet_output_t;
+  typedef std::vector<ptnet_output_t> ptnet_outputs_list_t;
 
   /*
    * Reachability graph (TBranch/TTree/TAddress in typy.pas). Nodes are kept
