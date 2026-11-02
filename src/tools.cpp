@@ -3,7 +3,7 @@
 /*                Higher College of Engineering in Zielona Gora               */
 /*                                                                            */
 /*                Decomposition and Place Encoding of Petri Net.              */
-/*                 Master's thesis, Supervisor Prof. M.Adamski.               */
+/*             Master's thesis, Supervisor Prof. Marcin Adamski.              */
 /*                                                                            */
 /*                                            Author: Mariusz Janczak (1993)  */
 /******************************************************************************/
