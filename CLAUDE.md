@@ -8,6 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 All documentation, code comments and commit messages are written in English. When you touch C++ code that still has Polish comments carried over from the Pascal sources, translate them to English.
 
+Naming, applied to code as it is ported (the short Pascal abbreviations only existed to fit an 80-column screen):
+
+- module API functions: `PTNet` prefix (`PTNetCreateGraph`); internal `static` functions: `ptnet` prefix (`ptnetBuildGraph`);
+- `ptnet_` prefix for global variables and types (`ptnet_branch_t`); locals, parameters and members are plain snake_case;
+- descriptive names for struct fields and variables instead of abbreviations (`marking`, not `MrkPlc`).
+
 ## Build and run
 
 ```sh

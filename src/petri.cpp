@@ -201,7 +201,7 @@ void PetriNet::Coloring(bool /*macro*/)
   }
 }
 
-static void CreateChoseDecompositionDialog(int& What)
+static void ptnetCreateChooseDecompositionDialog(int& What)
 {
   ptnet_flip_flop_type_t Data = flip_flop_d;
 
@@ -222,7 +222,7 @@ void PetriNet::Decomposition(void)
 {
   //ptnet_places_t Place;
 
-  CreateChoseDecompositionDialog(What);
+  ptnetCreateChooseDecompositionDialog(What);
   if (file_status == DATA_FILE_OK)
   {
 #if 0
@@ -257,19 +257,19 @@ void PetriNet::Decomposition(void)
   }
 }
 
-static void CreateChoseEncodingDialog(int& What)
+static void ptnetCreateChooseEncodingDialog(int& What)
 {
   What = encoded_sequents;
 }
 
-static void CreateChangeInitialDialog(bool& Rst)
+static void ptnetCreateChangeInitialDialog(bool& Rst)
 {
   ptnet_encoding_init_t What = initial_code_reset;
 
   Rst = (What == initial_code_reset);
 }
 #if 0
-static void WriteResultFile(unsigned int value, int Bit, boolean& WrResF)
+static void ptnetWriteResultFile(unsigned int value, int Bit, boolean& WrResF)
 {
   WrResF = (value & (1 << Bit)) ? true : false;
 }
@@ -282,10 +282,10 @@ void PetriNet::Encoding(void)
   //bool WrResF;
   int ByteStr;
 
-  CreateChoseEncodingDialog(ByteStr);
+  ptnetCreateChooseEncodingDialog(ByteStr);
   if (ByteStr != 0)
   {
-    CreateChangeInitialDialog(Rst);
+    ptnetCreateChangeInitialDialog(Rst);
     if (file_status == DATA_FILE_OK)
     {
       PTNetCreateMacronet(*this, LastMacro, dead, Danger);
@@ -295,43 +295,43 @@ void PetriNet::Encoding(void)
         PTNetCreateGraph(*this, true, dead);
         if (!dead)
         {
-          WriteResultFile(ByteStr, 1, WrResF);
+          ptnetWriteResultFile(ByteStr, 1, WrResF);
           /*poprawi�*/ListOfConcurrency(fname, WrResF, macronet_places, reachable_markings, Concurrency);
           if (WrResF)
           {
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 2, WrResF);
+          ptnetWriteResultFile(ByteStr, 2, WrResF);
           ListOfNonConcurrency(fname, WrResF, Concurrency, macronet_places, NonConcurrency);
           if (WrResF)
           {
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 3, WrResF);
+          ptnetWriteResultFile(ByteStr, 3, WrResF);
           VerifiedList(fname, WrResF, NonConcurrency, Verified);
           if (WrResF)
           {
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 4, WrResF);
+          ptnetWriteResultFile(ByteStr, 4, WrResF);
           CodesOfMcPlaces(fname, WrResF, macronet_places, Concurrency, Verified, McCodes);
           if (WrResF)
           {
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 5, WrResF);
+          ptnetWriteResultFile(ByteStr, 5, WrResF);
           CodesOfPlaces(fname, WrResF, Rst, Concurrency, reachable_markings, Marking, macronet_places, LastMacro, contents, McCodes, PlcCodes, ListCodes);
           if (WrResF)
           {
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 6, WrResF);
+          ptnetWriteResultFile(ByteStr, 6, WrResF);
           if (WrResF)
           {
             FullTable(fname, PlcCodes);
             OpenEditor(fname, true);
           }
-          WriteResultFile(ByteStr, 7, WrResF);
+          ptnetWriteResultFile(ByteStr, 7, WrResF);
           if (WrResF)
           {
             WriteSeq(fname, Net, Reg, input_data, Marking, ListCodes);
