@@ -28,7 +28,7 @@ reference for its behavior.
 | --- | --- |
 | `help`, `about` | working |
 | `reachability-graph` | working, output identical to the original program |
-| `macronet`, `reachability-graph-macronet` | in progress |
+| `macronet`, `reachability-graph-macronet` | working, output identical to the original program |
 | `coloring`, `coloring-macronet` | not ported yet |
 | `decomposition` | not ported yet |
 | `encoding` | not ported yet |

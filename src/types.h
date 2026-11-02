@@ -155,7 +155,7 @@ namespace types {
   };
   typedef REssencialPlc TEssencialPlc[ptnet_places_max + 1]; /* [1..100] */
 
-  typedef ptnet_places_t TContents[ptnet_macroplace_last + 1]; /* [101..199], indexed by macroplace number */
+  typedef ptnet_places_t ptnet_macroplace_contents_t[ptnet_macroplace_last + 1]; /* [101..199], places merged into each macroplace */
 
   typedef ptnet_places_t TPalete[51]; /* [1..50] */
 

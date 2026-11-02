@@ -260,98 +260,85 @@ namespace graph {
     }
   }
 
-#if 0
-  void GetMacro(ptnet_transitions_list_t macronet, ptnet_transitions_list_t transfers, TContents contents, integer LastMacro, text& Plik)
+  /* Place name as written in the macronet structure, e.g. "P14" or "MP101". */
+  static std::string ptnetPlaceName(int place)
   {
-    ptnet_transitions_list_t DMcNet, DTransfer;
-    byte I, J, N;
-    boolean Start;
-    char Ch;
+    return std::string(place > ptnet_places_max ? "MP" : "P") + std::to_string(place);
+  }
 
-    N = 0;
-    Plik << " Macronet structure." << NL;
-    Plik << "---------------------" << NL;
-    Plik << NL;
-    DMcNet = macronet;
-    Plik << "TRANSITIONS" << NL;
-    while (DMcNet != nil)
+  static void ptnetWriteMacronetStructure(std::ofstream& file, const PetriNet& petrinet)
+  {
+    file << " Macronet structure." << endl;
+    file << "---------------------" << endl;
+    file << endl;
+    file << "TRANSITIONS" << endl;
+    for (const ptnet_transition_t& transition : petrinet.macronet)
     {
-      Plik << 'T' << DMcNet->number << ": ";
-      Start = true;
-      for (I = 0; I <= ptnet_macroplace_last; I++)
-        if (DMcNet->input_places.has(I))
-        {
-          if (!Start)  Plik << " * ";
-          else Start = false;
-          if (I > ptnet_places_max)  Plik << 'M';
-          Plik << 'P' << I;
-        }
-      Plik << " |- ";
-      Start = true;
-      for (I = 0; I <= ptnet_macroplace_last; I++)
-        if (DMcNet->output_places.has(I))
-        {
-          if (!Start)  Plik << " * ";
-          else Start = false;
-          if (I > ptnet_places_max)  Plik << "@M";
-          if (I <= ptnet_places_max)  Plik << '@';
-          Plik << 'P' << I;
-        }
-      Plik << ';' << NL;
-      DMcNet = DMcNet->NextTrn;
+      const char* separator = "";
+
+      file << 'T' << transition.number << ": ";
+      for (int place : transition.input_places)
+      {
+        file << separator << ptnetPlaceName(place);
+        separator = " * ";
+      }
+      file << " |- ";
+      separator = "";
+      for (int place : transition.output_places)
+      {
+        file << separator << '@' << ptnetPlaceName(place);
+        separator = " * ";
+      }
+      file << ';' << endl;
     }
-    Plik << NL;
-    for (I = ptnet_macroplace_first; I <= LastMacro; I++)
+    file << endl;
+    for (int macroplace = ptnet_macroplace_first; macroplace <= petrinet.last_macroplace; macroplace++)
     {
-      Plik << "MACROPLACE " << I << NL;
-      Plik << "    Internal places      : ";
-      Start = true;
-      /* As in the original, place 100 is not listed. */
-      for (J = 0; J < ptnet_places_max; J++)
-        if (contents[I].has(J))
-          if (!Start)  Plik << ",P" << J;
-          else
-          {
-            Plik << 'P' << J;
-            Start = false;
-          }
-      Plik << NL;
-      Plik << "    Internal transitions : ";
-      Start = true;
-      DTransfer = transfers;
-      while (DTransfer != nil)
+      const ptnet_places_t& contents = petrinet.macroplace_contents[macroplace];
+      const char* separator = "";
+
+      file << "MACROPLACE " << macroplace << endl;
+      file << "    Internal places      : ";
+      for (int place : contents)
       {
-        for (J = 0; J <= ptnet_places_max; J++)
-          if ((DTransfer->input_places.has(J)) && (contents[I].has(J)))
-            if (!Start)  Plik << ",T" << DTransfer->number;
-            else
-            {
-              Plik << 'T' << DTransfer->number;
-              Start = false;
-            }
-        DTransfer = DTransfer->NextTrn;
+        /* As in the original, place 100 is not listed. */
+        if (place < ptnet_places_max)
+        {
+          file << separator << 'P' << place;
+          separator = ",";
+        }
       }
-      Plik << NL;
-      Plik << "    Border transitions   : ";
-      Start = true;
-      DMcNet = macronet;
-      while (DMcNet != nil)
+      file << endl;
+      file << "    Internal transitions : ";
+      separator = "";
+      for (const ptnet_transition_t& transfer : petrinet.transfers)
       {
-        if ((DMcNet->input_places.has(I)) || (DMcNet->output_places.has(I)))
-          if (!Start)  Plik << ",T" << DMcNet->number;
-          else
+        for (int place : transfer.input_places * contents)
+        {
+          if (place <= ptnet_places_max)
           {
-            Plik << 'T' << DMcNet->number;
-            Start = false;
+            file << separator << 'T' << transfer.number;
+            separator = ",";
           }
-        DMcNet = DMcNet->NextTrn;
+        }
       }
-      Plik << NL;
-      Plik << NL;
+      file << endl;
+      file << "    Border transitions   : ";
+      separator = "";
+      for (const ptnet_transition_t& transition : petrinet.macronet)
+      {
+        if (transition.input_places.has(macroplace) || transition.output_places.has(macroplace))
+        {
+          file << separator << 'T' << transition.number;
+          separator = ",";
+        }
+      }
+      file << endl;
+      file << endl;
     }
   }
-#endif
-  void PTNetWriteMacronet(PetriNet& petrinet, int /*LastMacro*/)
+
+  void PTNetWriteMacronet(PetriNet& petrinet)
   {
     std::string out_name = PTNetFileNameNew(petrinet.file_name, "mcn");
     std::ofstream file(out_name);
@@ -359,195 +346,207 @@ namespace graph {
     std::cout << "Macro file name: " << out_name << endl;
     if (file.is_open())
     {
-      //GetMacro(macronet, transfers, contents, LastMacro, Plik);
+      ptnetWriteMacronetStructure(file, petrinet);
       file.close();
     }
   }
 
-  static bool IsTransfer(ptnet_transition_t& trans)
+  /* Transfer transition: exactly one input place and one output place. */
+  static bool ptnetIsTransfer(const ptnet_transition_t& transition)
   {
-    std::cout << "Checking transition nr=" << trans.number << ", inputs=" << trans.input_places.size() << ", outputs=" << (trans.output_places.size() == 1) << endl;
-    return ((trans.input_places.size() == 1) && (trans.output_places.size() == 1));
-  }
-#if 0
-  static void AddMcPlc(ptnet_transitions_list_t macronet, ptnet_transitions_list_t transfers, ptnet_places_t& macronet_marking, integer& LastMacro, TContents& contents, boolean& dead, boolean& Danger);
-
-  static void Replace(ptnet_transitions_list_t macronet, byte Repl, byte Subs, boolean& dead, boolean& Danger)
-  {
-    char Ch;
-
-    if (Repl != Subs)
-      while (macronet != nil)
-      {
-        if (macronet->input_places.has(Repl))
-          if ((!(macronet->input_places.has(Subs))) ||
-            (macronet->input_places == macronet->output_places))
-            macronet->input_places = macronet->input_places - set::of(Repl, eos) + set::of(Subs, eos);
-          else
-          {
-            dead = true;
-            Danger = true;
-          }
-        if (macronet->output_places.has(Repl))
-          if ((!(macronet->output_places.has(Subs))) ||
-            (macronet->input_places == macronet->output_places))
-            macronet->output_places = macronet->output_places - set::of(Repl, eos) + set::of(Subs, eos);
-          else
-          {
-            dead = true;
-            Danger = true;
-          }
-        macronet = macronet->NextTrn;
-      }
+    return (transition.input_places.size() == 1) && (transition.output_places.size() == 1);
   }
 
-  static void AddMcPlc(ptnet_transitions_list_t macronet, ptnet_transitions_list_t transfers, ptnet_places_t& macronet_marking, integer& LastMacro, TContents& contents, boolean& dead, boolean& Danger)
+  /*
+   * Replace place "replaced" with "substitute" in all transitions. Both places
+   * becoming inputs (or outputs) of the same transition makes the net unsafe.
+   */
+  static void ptnetReplacePlace(ptnet_transitions_list_t& transitions, int replaced, int substitute, bool& dead, bool& unsafe)
   {
-    integer I, inp_, Out, Leav, Cln;
-    ptnet_transitions_list_t DTrn;
-
-    for (I = 1; I <= ptnet_places_t::max; I++)
+    if (replaced != substitute)
     {
-      if (transfers->input_places.has(I))  inp_ = I;
-      if (transfers->output_places.has(I))  Out = I;
+      for (ptnet_transition_t& transition : transitions)
+      {
+        if (transition.input_places.has(replaced))
+        {
+          if (!transition.input_places.has(substitute) || (transition.input_places == transition.output_places))
+          {
+            transition.input_places.erase(replaced);
+            transition.input_places.insert(substitute);
+          }
+          else
+          {
+            dead = true;
+            unsafe = true;
+          }
+        }
+        if (transition.output_places.has(replaced))
+        {
+          if (!transition.output_places.has(substitute) || (transition.input_places == transition.output_places))
+          {
+            transition.output_places.erase(replaced);
+            transition.output_places.insert(substitute);
+          }
+          else
+          {
+            dead = true;
+            unsafe = true;
+          }
+        }
+      }
     }
+  }
+
+  /* Merge the input and output place of a transfer transition into a macroplace. */
+  static void ptnetAddMacroplace(PetriNet& petrinet, const ptnet_transition_t& transfer, bool& dead, bool& unsafe)
+  {
+    ptnet_macroplace_contents_t& contents = petrinet.macroplace_contents;
+    ptnet_places_t& marking = petrinet.macronet_marking;
+    int input = *transfer.input_places.begin();
+    int output = *transfer.output_places.begin();
+
     /* As in the original, place 100 is not treated as an ordinary place here. */
-    if ((inp_ < ptnet_places_max) && (Out < ptnet_places_max))
+    if ((input < ptnet_places_max) && (output < ptnet_places_max))
     {
-      LastMacro += 1;
-      contents[LastMacro] = set::of(inp_, eos) + set::of(Out, eos);
-      if ((macronet_marking.has(inp_)) || (macronet_marking.has(Out)))
-        macronet_marking = macronet_marking - set::of(inp_, Out, eos) + set::of(LastMacro, eos);
-      Replace(macronet, inp_, LastMacro, dead, Danger);
-      Replace(macronet, Out, LastMacro, dead, Danger);
-    }
-    else
-      if (inp_ != Out)
+      /* Two ordinary places make a new macroplace. */
+      int macroplace = ++petrinet.last_macroplace;
+
+      contents[macroplace] = ptnet_places_t{ input, output };
+      if (marking.has(input) || marking.has(output))
       {
-        if ((inp_ > ptnet_places_max) && (Out > ptnet_places_max))
-        {
-          if (inp_ > Out)
-          {
-            Leav = Out;
-            Cln = inp_;
-          }
-          else
-          {
-            Leav = inp_;
-            Cln = Out;
-          }
-          Replace(macronet, Cln, Leav, dead, Danger);
-          contents[Leav] = contents[Leav] + contents[Cln];
-          if (macronet_marking.has(Cln))
-            macronet_marking = macronet_marking - set::of(Cln, eos) + set::of(Leav, eos);
-          for (I = Cln + 1; I <= LastMacro; I++)
-            Replace(macronet, I, I - 1, dead, Danger);
-          for (I = Cln + 1; I <= LastMacro; I++)
-            contents[I - 1] = contents[I];
-          LastMacro -= 1;
-          contents[I] = set::of(eos);
-        }
-        else
-        {
-          if (inp_ > Out)
-          {
-            Leav = inp_;
-            Cln = Out;
-          }
-          else
-          {
-            Leav = Out;
-            Cln = inp_;
-          }
-          contents[Leav] = contents[Leav] + set::of(Cln, eos);
-          if (macronet_marking.has(Cln))
-            macronet_marking = macronet_marking - set::of(Cln, eos) + set::of(Leav, eos);
-          Replace(macronet, Cln, Leav, dead, Danger);
-        }
+        marking -= ptnet_places_t{ input, output };
+        marking.insert(macroplace);
       }
-  }
-
-  static void AddTrn(ptnet_transitions_list_t Trns, ptnet_transitions_list_t Net, ptnet_transitions_list_t& transfers)
-  {
-    while ((Net->number != Trns->number) && (Net != nil))
-      Net = Net->NextTrn;
-    Trns->input_places = Net->input_places;
-    Trns->output_places = Net->output_places;
-    Trns->NextTrn = transfers;
-    transfers = Trns;
-  }
-
-  static void PlcOfMacro(ptnet_transitions_list_t Trns, ptnet_places_t& macronet_places)
-  {
-    macronet_places = set::of(eos);
-    while (Trns != nil)
-    {
-      macronet_places = macronet_places + Trns->input_places;
-      Trns = Trns->NextTrn;
+      ptnetReplacePlace(petrinet.macronet, input, macroplace, dead, unsafe);
+      ptnetReplacePlace(petrinet.macronet, output, macroplace, dead, unsafe);
     }
-  }
-#endif
-
-  void PTNetCreateMacronet(PetriNet& petrinet, int& LastMacro, bool& dead, bool& /*Danger*/)
-  {
-    /*ptnet_transitions_list_t ClrTrn, Prev, Actual;*/
-    /*integer I;*/
-
-    dead = false;
-
-    /* Make a copy of net places ... */
-    for (ptnet_transitions_list_t::iterator it = petrinet.net.begin(); it != petrinet.net.end(); it++)
+    else if (input != output)
     {
-      ptnet_transition_t trans;
-      trans.number = it->number;
-      trans.input_places = it->input_places;
-      trans.output_places = it->output_places;
-      petrinet.macronet.push_back(trans);
-    }
-
-    /* ... and a copy of net markings */
-    petrinet.macronet_marking = petrinet.net_marking;
-
-    //for (I = ptnet_macroplace_first; I <= ptnet_macroplace_last; I++) contents[I] = set::of(eos);
-    //LastMacro = ptnet_macroplace_first - 1;
-    for (ptnet_transitions_list_t::iterator it = petrinet.macronet.begin(); it != petrinet.macronet.end(); it++)
-    {
-      if (IsTransfer(*it))
+      if ((input > ptnet_places_max) && (output > ptnet_places_max))
       {
-        std::cout << "Transition has transfer" << endl;
-#if 0
-        do {
-          AddMcPlc(macronet->NextTrn, macronet, macronet_marking, LastMacro, contents, dead, Danger);
-          ClrTrn = macronet;
-          macronet = macronet->NextTrn;
-          AddTrn(ClrTrn, Net, transfers);
-        } while (!((!IsTransfer(macronet)) || (macronet->NextTrn == nil) || dead));
-#endif
-      }
-    }
-#if 0
-    Prev = macronet;
-    Actual = macronet->NextTrn;
-    while ((Actual != nil) && (!dead))
-    {
-      if (IsTransfer(Actual))
-      {
-        Prev->NextTrn = Actual->NextTrn;
-        AddMcPlc(macronet, Actual, macronet_marking, LastMacro, contents, dead, Danger);
-        AddTrn(Actual, Net, transfers);
-        Actual = Prev->NextTrn;
+        /* Two macroplaces are merged into the lower one and the ones above are renumbered. */
+        int kept = std::min(input, output);
+        int removed = std::max(input, output);
+
+        ptnetReplacePlace(petrinet.macronet, removed, kept, dead, unsafe);
+        contents[kept] += contents[removed];
+        if (marking.has(removed))
+        {
+          marking.erase(removed);
+          marking.insert(kept);
+        }
+        /* As in the original, the marking is not renumbered. */
+        for (int macroplace = removed + 1; macroplace <= petrinet.last_macroplace; macroplace++)
+        {
+          ptnetReplacePlace(petrinet.macronet, macroplace, macroplace - 1, dead, unsafe);
+        }
+        for (int macroplace = removed + 1; macroplace <= petrinet.last_macroplace; macroplace++)
+        {
+          contents[macroplace - 1] = contents[macroplace];
+        }
+        contents[petrinet.last_macroplace].clear();
+        petrinet.last_macroplace--;
       }
       else
       {
-        Prev = Actual;
-        Actual = Actual->NextTrn;
+        /* An ordinary place joins a macroplace. */
+        int macroplace = std::max(input, output);
+        int place = std::min(input, output);
+
+        contents[macroplace].insert(place);
+        if (marking.has(place))
+        {
+          marking.erase(place);
+          marking.insert(macroplace);
+        }
+        ptnetReplacePlace(petrinet.macronet, place, macroplace, dead, unsafe);
       }
     }
-    PlcOfMacro(macronet, macronet_places);
-#endif
+  }
+
+  /* Store a removed transfer transition with its original places, prepended as in the original. */
+  static void ptnetAddTransfer(PetriNet& petrinet, ptnet_transition_t transfer)
+  {
+    for (const ptnet_transition_t& transition : petrinet.net)
+    {
+      if (transition.number == transfer.number)
+      {
+        transfer.input_places = transition.input_places;
+        transfer.output_places = transition.output_places;
+        break;
+      }
+    }
+    petrinet.transfers.insert(petrinet.transfers.begin(), transfer);
+  }
+
+  /* Remove the transfer transition at "index" from the macronet and merge its places. */
+  static void ptnetRemoveTransfer(PetriNet& petrinet, size_t index, bool& dead, bool& unsafe)
+  {
+    ptnet_transition_t transfer = petrinet.macronet[index];
+
+    petrinet.macronet.erase(petrinet.macronet.begin() + index);
+    ptnetAddMacroplace(petrinet, transfer, dead, unsafe);
+    ptnetAddTransfer(petrinet, transfer);
+  }
+
+  void PTNetCreateMacronet(PetriNet& petrinet, bool& dead, bool& unsafe)
+  {
+    dead = false;
+    unsafe = false;
+
+    /* The macronet starts as a copy of the net places and marking. */
+    petrinet.macronet.clear();
+    for (const ptnet_transition_t& transition : petrinet.net)
+    {
+      ptnet_transition_t copy;
+
+      copy.number = transition.number;
+      copy.input_places = transition.input_places;
+      copy.output_places = transition.output_places;
+      petrinet.macronet.push_back(copy);
+    }
+    petrinet.macronet_marking = petrinet.net_marking;
+    petrinet.transfers.clear();
+    for (ptnet_places_t& contents : petrinet.macroplace_contents)
+    {
+      contents.clear();
+    }
+    petrinet.last_macroplace = ptnet_macroplace_first - 1;
+
+    if (!petrinet.macronet.empty())
+    {
+      /* Transfers at the beginning of the list, the last remaining transition is kept. */
+      if (ptnetIsTransfer(petrinet.macronet.front()))
+      {
+        do
+        {
+          ptnetRemoveTransfer(petrinet, 0, dead, unsafe);
+        } while (!petrinet.macronet.empty() && ptnetIsTransfer(petrinet.macronet.front()) && (petrinet.macronet.size() > 1) && !dead);
+      }
+      /* Transfers in the rest of the list, the first transition is not checked again. */
+      size_t index = 1;
+      while ((index < petrinet.macronet.size()) && !dead)
+      {
+        if (ptnetIsTransfer(petrinet.macronet[index]))
+        {
+          ptnetRemoveTransfer(petrinet, index, dead, unsafe);
+        }
+        else
+        {
+          index++;
+        }
+      }
+    }
+
+    petrinet.macronet_places.clear();
+    for (const ptnet_transition_t& transition : petrinet.macronet)
+    {
+      petrinet.macronet_places += transition.input_places;
+    }
+
     if (petrinet.save_intermediate_results)
     {
-      PTNetWriteMacronet(petrinet, LastMacro);
+      PTNetWriteMacronet(petrinet);
     }
   }
 }

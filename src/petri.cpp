@@ -26,7 +26,7 @@ TPalete Color, McColor;
 
 bool dead, Finish, Danger, Rst;
 
-int LastMacro, ColorsNr, What;
+int ColorsNr, What;
 
 void PetriNet::About(void)
 {
@@ -67,6 +67,7 @@ PetriNet::PetriNet(const std::string& fname) : file_name(fname)
 {
   save_intermediate_results = true;
   file_status = DATA_FILE_UNKNOWN;
+  last_macroplace = ptnet_macroplace_first - 1;
 
   if (file_name.length())
   {
@@ -103,8 +104,7 @@ void PetriNet::ReachabilityGraph(bool macro)
     }
     else
     {
-#if 0
-      PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
+      PTNetCreateMacronet(*this, dead, Danger);
       if ((!dead) && (!Danger))
       {
         PTNetCreateGraph(*this, true, dead);
@@ -116,14 +116,11 @@ void PetriNet::ReachabilityGraph(bool macro)
           ptnetShowMessage(ptnetGetMessage(25));
         }
       }
-#endif
     }
-#if 0
     if (dead)
     {
       ptnetShowMessage(ptnetGetMessage(27));
     }
-#endif
   }
 }
 
@@ -134,24 +131,15 @@ void PetriNet::CreateMacronet(void)
 {
   if (file_status == DATA_FILE_OK)
   {
-#if 0
-    PTNetCreateMacronet(fname, true, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
-    if ((!dead) && (!Danger))
+    PTNetCreateMacronet(*this, dead, Danger);
+    if (dead)
     {
-      OpenEditor(fname, true);
+      ptnetShowMessage(ptnetGetMessage(27));
     }
-    else
+    else if (Danger)
     {
-      if (dead)
-      {
-        ptnetShowMessage(ptnetGetMessage(27));
-      }
-      else
-      {
-        ptnetShowMessage(ptnetGetMessage(25));
-      }
+      ptnetShowMessage(ptnetGetMessage(25));
     }
-#endif
   }
 }
 
@@ -164,7 +152,7 @@ void PetriNet::Coloring(bool /*macro*/)
   {
 #if 0
     dead = false;
-    PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
+    PTNetCreateMacronet(*this, dead, Danger);
     if ((!dead) && (!Danger))
     {
       PTNetCreateGraph(*this, true, dead);
@@ -176,7 +164,7 @@ void PetriNet::Coloring(bool /*macro*/)
         Coloring(macronet_branches, McColor, ColorsNr);
         if (What == 1) /* Kolorowanie sieci */
         {
-          WhichColor(McColor, ColorsNr, contents, LastMacro, Color);
+          WhichColor(McColor, ColorsNr, macroplace_contents, last_macroplace, Color);
           WriteColored(fname, Net, Color, ColorsNr, What, outputs, false);
         }
         else /* Kolorowanie makrosieci */
@@ -226,14 +214,14 @@ void PetriNet::Decomposition(void)
   if (file_status == DATA_FILE_OK)
   {
 #if 0
-    PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
+    PTNetCreateMacronet(*this, dead, Danger);
     if ((!dead) && (!Danger))
     {
       PTNetCreateGraph(*this, true, dead);
       if (!dead)
       {
         Coloring(macronet_branches, McColor, ColorsNr);
-        WhichColor(McColor, ColorsNr, contents, LastMacro, Color);
+        WhichColor(McColor, ColorsNr, macroplace_contents, last_macroplace, Color);
         Automats(fname, input_data, Net, outputs, Marking, Color, ColorsNr, What);
         OpenEditor(fname, true);
       }
@@ -288,7 +276,7 @@ void PetriNet::Encoding(void)
     ptnetCreateChangeInitialDialog(Rst);
     if (file_status == DATA_FILE_OK)
     {
-      PTNetCreateMacronet(*this, LastMacro, dead, Danger);
+      PTNetCreateMacronet(*this, dead, Danger);
       if ((!dead) && (!Danger))
       {
 #if 0
@@ -320,7 +308,7 @@ void PetriNet::Encoding(void)
             OpenEditor(fname, true);
           }
           ptnetWriteResultFile(ByteStr, 5, WrResF);
-          CodesOfPlaces(fname, WrResF, Rst, Concurrency, reachable_markings, Marking, macronet_places, LastMacro, contents, McCodes, PlcCodes, ListCodes);
+          CodesOfPlaces(fname, WrResF, Rst, Concurrency, reachable_markings, Marking, macronet_places, last_macroplace, macroplace_contents, McCodes, PlcCodes, ListCodes);
           if (WrResF)
           {
             OpenEditor(fname, true);

@@ -29,7 +29,8 @@ public:
   ptnet_branches_list_t branches, macronet_branches;
   ptnet_markings_list_t reachable_markings; /* markings of the most recently built graph */
   ptnet_places_t net_marking, macronet_marking, macronet_places;
-  TContents contents;
+  ptnet_macroplace_contents_t macroplace_contents;
+  int last_macroplace;  /* highest macroplace number in use */
 };
 
 #endif /* __PETRI_H__ */
