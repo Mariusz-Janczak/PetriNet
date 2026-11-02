@@ -43,6 +43,14 @@ namespace types {
   } ptnet_encoding_init_t;
 
   /*
+   * Places and macroplaces share one numbering space, so a single set can
+   * hold both: ordinary places are 1..100 and macroplaces 101..199.
+   */
+  constexpr int ptnet_places_max = 100;
+  constexpr int ptnet_macroplace_first = 101;
+  constexpr int ptnet_macroplace_last = 199;
+
+  /*
    * Equivalent of Pascal "set of 1..255" (TPlace). Operators follow Pascal
    * semantics: + union, - difference, * intersection, <= subset.
    * Iteration yields the elements in ascending order.
@@ -125,19 +133,22 @@ namespace types {
   } ptnet_arc_t;
 
   typedef struct ptnet_branch_s {
-    ptnet_places_t MrkPlc;
-    std::vector<ptnet_arc_t> RdyTrn;
+    ptnet_places_t marking;         /* marked places of this node */
+    std::vector<ptnet_arc_t> arcs;  /* one arc per transition enabled in this marking */
   } ptnet_branch_t;
   typedef std::vector<ptnet_branch_t> ptnet_branches_list_t;
+
+  /* Markings of all graph nodes (TPeak list in typy.pas). */
+  typedef std::vector<ptnet_places_t> ptnet_markings_list_t;
 
   /* Arrays below are sized so that the original Pascal indices can be used. */
   struct REssencialPlc {
     int Nr;
     bool Rep;
   };
-  typedef REssencialPlc TEssencialPlc[101]; /* [1..100] */
+  typedef REssencialPlc TEssencialPlc[ptnet_places_max + 1]; /* [1..100] */
 
-  typedef ptnet_places_t TContents[200]; /* [101..199] */
+  typedef ptnet_places_t TContents[ptnet_macroplace_last + 1]; /* [101..199], indexed by macroplace number */
 
   typedef ptnet_places_t TPalete[51]; /* [1..50] */
 
@@ -177,12 +188,6 @@ namespace types {
     int Price;
     ptnet_places_t ContMc;
     PContMc Next;
-  };
-
-  typedef struct TPeak* PPeak;
-  struct TPeak {
-    ptnet_places_t PeakCont;
-    PPeak Next;
   };
 
   typedef struct TConcurrency* PConcurrency;

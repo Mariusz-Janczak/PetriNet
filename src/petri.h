@@ -27,6 +27,7 @@ public:
   ptnet_transitions_list_t net, macronet, transfers;
   ptnet_registers_list_t reg;
   ptnet_branches_list_t branches, macronet_branches;
+  ptnet_markings_list_t reachable_markings; /* markings of the most recently built graph */
   ptnet_places_t net_marking, macronet_marking, macronet_places;
   TContents contents;
 };

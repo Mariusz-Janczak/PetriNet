@@ -4,7 +4,7 @@
 #include "petri.h"
 
 namespace graph {
-  void PTNetCreateGraph(PetriNet& petrinet, bool macro, PPeak& Peak, bool& dead);
+  void PTNetCreateGraph(PetriNet& petrinet, bool macro, bool& dead);
   void PTNetWriteGraph(PetriNet& petrinet, bool macro);
 
   void PTNetCreateMacronet(PetriNet& petrinet, int& LastMacro, bool& dead, bool& Danger);

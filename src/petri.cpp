@@ -16,7 +16,6 @@
 //#include "colored.h"
 #include "graph.h"
 
-PPeak Peak;
 PConcurrency Concurrency;
 PNonconcurrency NonConcurrency;
 PVerified Verified;
@@ -100,7 +99,7 @@ void PetriNet::ReachabilityGraph(bool macro)
   {
     if (!macro)
     {
-      PTNetCreateGraph(*this, macro, Peak, dead);
+      PTNetCreateGraph(*this, macro, dead);
     }
     else
     {
@@ -108,7 +107,7 @@ void PetriNet::ReachabilityGraph(bool macro)
       PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
       if ((!dead) && (!Danger))
       {
-        PTNetCreateGraph(fname, true, macro, macronet, macronet_marking, branches, Peak, dead);
+        PTNetCreateGraph(*this, true, dead);
       }
       else
       {
@@ -168,7 +167,7 @@ void PetriNet::Coloring(bool /*macro*/)
     PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
     if ((!dead) && (!Danger))
     {
-      PTNetCreateGraph(fname, false, 2, macronet, macronet_marking, macronet_branches, Peak, dead);
+      PTNetCreateGraph(*this, true, dead);
       if (dead) {
         ptnetShowMessage(ptnetGetMessage(27));
       }
@@ -230,7 +229,7 @@ void PetriNet::Decomposition(void)
     PTNetCreateMacronet(fname, false, Net, Marking, macronet, transfers, macronet_marking, macronet_places, contents, LastMacro, dead, Danger);
     if ((!dead) && (!Danger))
     {
-      PTNetCreateGraph(fname, false, 2, macronet, macronet_marking, macronet_branches, Peak, dead);
+      PTNetCreateGraph(*this, true, dead);
       if (!dead)
       {
         Coloring(macronet_branches, McColor, ColorsNr);
@@ -293,11 +292,11 @@ void PetriNet::Encoding(void)
       if ((!dead) && (!Danger))
       {
 #if 0
-        PTNetCreateGraph(fname, false, 2, macronet, macronet_marking, macronet_branches, Peak, dead);
+        PTNetCreateGraph(*this, true, dead);
         if (!dead)
         {
           WriteResultFile(ByteStr, 1, WrResF);
-          /*poprawi�*/ListOfConcurrency(fname, WrResF, macronet_places, Peak, Concurrency);
+          /*poprawi�*/ListOfConcurrency(fname, WrResF, macronet_places, reachable_markings, Concurrency);
           if (WrResF)
           {
             OpenEditor(fname, true);
@@ -321,7 +320,7 @@ void PetriNet::Encoding(void)
             OpenEditor(fname, true);
           }
           WriteResultFile(ByteStr, 5, WrResF);
-          CodesOfPlaces(fname, WrResF, Rst, Concurrency, Peak, Marking, macronet_places, LastMacro, contents, McCodes, PlcCodes, ListCodes);
+          CodesOfPlaces(fname, WrResF, Rst, Concurrency, reachable_markings, Marking, macronet_places, LastMacro, contents, McCodes, PlcCodes, ListCodes);
           if (WrResF)
           {
             OpenEditor(fname, true);

@@ -16,12 +16,12 @@
 
 namespace graph {
   /* Overwrite text at a 1-based position, like Pascal delete() followed by insert(). */
-  static void WriteAt(std::string& line, size_t position, const std::string& text)
+  static void ptnetOverwriteText(std::string& line, size_t position, const std::string& text)
   {
     line.replace(std::min(position - 1, line.length()), text.length(), text);
   }
 
-  static void WritePlc(const ptnet_places_t& places, std::string& line, size_t& position)
+  static void ptnetWritePlaces(const ptnet_places_t& places, std::string& line, size_t& position)
   {
     size_t left = places.size();
 
@@ -29,18 +29,18 @@ namespace graph {
     {
       std::string number = std::to_string(place);
 
-      WriteAt(line, position, number);
+      ptnetOverwriteText(line, position, number);
       position += number.length();
       if (--left > 0)
       {
-        WriteAt(line, position, ",");
+        ptnetOverwriteText(line, position, ",");
         position += 1;
       }
     }
   }
 
   /* Horizontal table line with columns of the same width as in the original output. */
-  static std::string Rule(const char* left, const char* fill, const char* cross, const char* right)
+  static std::string ptnetTableRule(const char* left, const char* fill, const char* cross, const char* right)
   {
     const size_t widths[] = { 30, 13, 31 };
     std::string rule(left);
@@ -57,7 +57,7 @@ namespace graph {
   }
 
   /* Table rows are built with '|' as a placeholder, as box drawing characters take more than one byte. */
-  static void WriteRow(std::ofstream& file, const std::string& line)
+  static void ptnetWriteTableRow(std::ofstream& file, const std::string& line)
   {
     for (char ch : line)
     {
@@ -73,7 +73,7 @@ namespace graph {
     file << endl;
   }
 
-  static void GetGraf(std::ofstream& file, const ptnet_branches_list_t& branches, const ptnet_transitions_list_t& transitions, bool macro)
+  static void ptnetWriteGraphTable(std::ofstream& file, const ptnet_branches_list_t& branches, const ptnet_transitions_list_t& transitions, bool macro)
   {
     const std::string clean = "|                              |             |                               |";
 
@@ -90,9 +90,9 @@ namespace graph {
         file << "------------------------------" << endl;
       }
       file << endl;
-      file << Rule("╒", "═", "╤", "╕") << endl;
-      WriteRow(file, "|        MARKED PLACES         | TRANSITIONS |       NEW MARKED PLACES       |");
-      file << Rule("╞", "═", "╪", "╡") << endl;
+      file << ptnetTableRule("╒", "═", "╤", "╕") << endl;
+      ptnetWriteTableRow(file, "|        MARKED PLACES         | TRANSITIONS |       NEW MARKED PLACES       |");
+      file << ptnetTableRule("╞", "═", "╪", "╡") << endl;
     }
     else
     {
@@ -103,24 +103,24 @@ namespace graph {
       std::string line = clean;
       size_t position = 3;
 
-      WritePlc(branches[b].MrkPlc, line, position);
+      ptnetWritePlaces(branches[b].marking, line, position);
       position = (position < 39) ? 39 : position + 1;
-      for (const ptnet_arc_t& arc : branches[b].RdyTrn)
+      for (const ptnet_arc_t& arc : branches[b].arcs)
       {
-        WriteAt(line, position, std::to_string(transitions[arc.transition].Nr));
+        ptnetOverwriteText(line, position, std::to_string(transitions[arc.transition].Nr));
         position = 48;
-        WritePlc(branches[arc.branch].MrkPlc, line, position);
+        ptnetWritePlaces(branches[arc.branch].marking, line, position);
         position = 39;
-        WriteRow(file, line);
+        ptnetWriteTableRow(file, line);
         line = clean;
       }
       if (b + 1 == branches.size())
       {
-        file << Rule("╘", "═", "╧", "╛") << endl;
+        file << ptnetTableRule("╘", "═", "╧", "╛") << endl;
       }
       else
       {
-        file << Rule("├", "─", "┼", "┤") << endl;
+        file << ptnetTableRule("├", "─", "┼", "┤") << endl;
       }
     }
   }
@@ -133,50 +133,50 @@ namespace graph {
     std::cout << "Graph file name: " << out_name << endl;
     if (file.is_open())
     {
-      GetGraf(file, macro ? petrinet.macronet_branches : petrinet.branches, macro ? petrinet.macronet : petrinet.net, macro);
+      ptnetWriteGraphTable(file, macro ? petrinet.macronet_branches : petrinet.branches, macro ? petrinet.macronet : petrinet.net, macro);
       file.close();
     }
   }
 
-  static void ReadyTrn(const ptnet_transitions_list_t& transitions, ptnet_branch_t& branch)
+  static void ptnetFindEnabledTransitions(const ptnet_transitions_list_t& transitions, ptnet_branch_t& branch)
   {
-    /* The original prepends ready transitions to the list, so they are collected in reverse order. */
+    /* The original prepends enabled transitions to the list, so they are collected in reverse order. */
     for (size_t t = transitions.size(); t-- > 0; )
     {
-      if (transitions[t].InpPlc <= branch.MrkPlc)
+      if (transitions[t].InpPlc <= branch.marking)
       {
-        branch.RdyTrn.push_back({ t, 0 });
+        branch.arcs.push_back({ t, 0 });
       }
     }
   }
 
-  static void Light(const ptnet_transition_t& transition, const ptnet_places_t& OldMarkPlc, ptnet_places_t& NewMarkPlc, bool& Danger, bool& dead)
+  static void ptnetFireTransition(const ptnet_transition_t& transition, const ptnet_places_t& old_marking, ptnet_places_t& new_marking, bool& unsafe, bool& dead)
   {
-    NewMarkPlc = OldMarkPlc - transition.InpPlc;
-    Danger = false;
+    new_marking = old_marking - transition.InpPlc;
+    unsafe = false;
     for (int place : transition.OutPlc)
     {
-      if (NewMarkPlc.has(place))
+      if (new_marking.has(place))
       {
-        Danger = true;
+        unsafe = true;
         dead = true;
       }
       else
       {
-        /* As in the original, a following output place clears Danger again. */
-        Danger = false;
-        NewMarkPlc.insert(place);
+        /* As in the original, a following output place clears the unsafe flag again. */
+        unsafe = false;
+        new_marking.insert(place);
       }
     }
   }
 
-  static bool FindBranch(const ptnet_branches_list_t& branches, const ptnet_places_t& NewMarkPlc, size_t& like)
+  static bool ptnetFindBranch(const ptnet_branches_list_t& branches, const ptnet_places_t& marking, size_t& found)
   {
     for (size_t b = 0; b < branches.size(); b++)
     {
-      if (branches[b].MrkPlc == NewMarkPlc)
+      if (branches[b].marking == marking)
       {
-        like = b;
+        found = b;
         return true;
       }
     }
@@ -187,82 +187,73 @@ namespace graph {
    * Depth-first construction of the graph from the node "current". The
    * branches vector grows during recursion, so nodes are accessed by index only.
    */
-  static void MarkGraf(const ptnet_transitions_list_t& transitions, ptnet_branches_list_t& branches, size_t current, bool& Start, bool& dead)
+  static void ptnetBuildGraph(const ptnet_transitions_list_t& transitions, ptnet_branches_list_t& branches, size_t current, bool& proceed, bool& dead)
   {
-    if (Start)
+    if (proceed)
     {
-      ReadyTrn(transitions, branches[current]);
-      if (branches[current].RdyTrn.empty())
+      ptnetFindEnabledTransitions(transitions, branches[current]);
+      if (branches[current].arcs.empty())
       {
-        Start = false;
+        proceed = false;
         dead = true;
       }
       else
       {
-        const ptnet_places_t OldMarkPlc = branches[current].MrkPlc;
+        const ptnet_places_t old_marking = branches[current].marking;
         size_t a = 0;
 
-        for (; (a < branches[current].RdyTrn.size()) && Start; a++)
+        for (; (a < branches[current].arcs.size()) && proceed; a++)
         {
-          ptnet_places_t NewMarkPlc;
-          bool Danger = false;
-          size_t like = 0;
+          ptnet_places_t new_marking;
+          bool unsafe = false;
+          size_t found = 0;
 
-          Light(transitions[branches[current].RdyTrn[a].transition], OldMarkPlc, NewMarkPlc, Danger, dead);
-          if (Danger)  Start = false;
-          if (FindBranch(branches, NewMarkPlc, like))
+          ptnetFireTransition(transitions[branches[current].arcs[a].transition], old_marking, new_marking, unsafe, dead);
+          if (unsafe)  proceed = false;
+          if (ptnetFindBranch(branches, new_marking, found))
           {
-            branches[current].RdyTrn[a].branch = like;
+            branches[current].arcs[a].branch = found;
           }
           else
           {
             ptnet_branch_t branch;
 
-            branch.MrkPlc = NewMarkPlc;
+            branch.marking = new_marking;
             branches.push_back(branch);
-            branches[current].RdyTrn[a].branch = branches.size() - 1;
-            MarkGraf(transitions, branches, branches.size() - 1, Start, dead);
+            branches[current].arcs[a].branch = branches.size() - 1;
+            ptnetBuildGraph(transitions, branches, branches.size() - 1, proceed, dead);
           }
         }
         /* Drop arcs not processed after the construction was stopped (their targets are unknown). */
-        branches[current].RdyTrn.resize(a);
+        branches[current].arcs.resize(a);
       }
     }
   }
-#if 0
-  static void GraphPeak(ptnet_branches_list_t branches, PPeak& Peak)
-  {
-    byte I;
-    PPeak NewPeak;
 
-    Peak = nil;
-    while (branches != nil)
+  /* Markings of all graph nodes, in reverse order of creation as the original prepends them. */
+  static void ptnetCollectMarkings(const ptnet_branches_list_t& branches, ptnet_markings_list_t& markings)
+  {
+    markings.clear();
+    for (auto it = branches.rbegin(); it != branches.rend(); it++)
     {
-      NewPeak = new TPeak;
-      NewPeak->PeakCont = set::of(eos);
-      NewPeak->Next = Peak;
-      Peak = NewPeak;
-      for (I = 0; I <= 199; I++)
-        if (branches->Addr->MrkPlc.has(I))
-          NewPeak->PeakCont = NewPeak->PeakCont + set::of(I, eos);
-      branches = branches->Next;
+      markings.push_back(it->marking);
     }
   }
-#endif
-  void PTNetCreateGraph(PetriNet& petrinet, bool macro, PPeak& /*Peak*/, bool& dead)
+
+  void PTNetCreateGraph(PetriNet& petrinet, bool macro, bool& dead)
   {
     const ptnet_transitions_list_t& transitions = macro ? petrinet.macronet : petrinet.net;
     ptnet_branches_list_t& branches = macro ? petrinet.macronet_branches : petrinet.branches;
     ptnet_branch_t root;
-    bool Start = true;
+    bool proceed = true;
 
-    root.MrkPlc = macro ? petrinet.macronet_marking : petrinet.net_marking;
+    root.marking = macro ? petrinet.macronet_marking : petrinet.net_marking;
     branches.clear();
     branches.push_back(root);
     dead = false;
 
-    MarkGraf(transitions, branches, 0, Start, dead);
-    //GraphPeak(branches, Peak);
+    ptnetBuildGraph(transitions, branches, 0, proceed, dead);
+    ptnetCollectMarkings(branches, petrinet.reachable_markings);
     if (petrinet.save_intermediate_results)
     {
       PTNetWriteGraph(petrinet, macro);
@@ -287,35 +278,36 @@ namespace graph {
     {
       Plik << 'T' << DMcNet->Nr << ": ";
       Start = true;
-      for (I = 0; I <= 199; I++)
+      for (I = 0; I <= ptnet_macroplace_last; I++)
         if (DMcNet->InpPlc.has(I))
         {
           if (!Start)  Plik << " * ";
           else Start = false;
-          if (I > 100)  Plik << 'M';
+          if (I > ptnet_places_max)  Plik << 'M';
           Plik << 'P' << I;
         }
       Plik << " |- ";
       Start = true;
-      for (I = 0; I <= 199; I++)
+      for (I = 0; I <= ptnet_macroplace_last; I++)
         if (DMcNet->OutPlc.has(I))
         {
           if (!Start)  Plik << " * ";
           else Start = false;
-          if (I > 100)  Plik << "@M";
-          if (I <= 100)  Plik << '@';
+          if (I > ptnet_places_max)  Plik << "@M";
+          if (I <= ptnet_places_max)  Plik << '@';
           Plik << 'P' << I;
         }
       Plik << ';' << NL;
       DMcNet = DMcNet->NextTrn;
     }
     Plik << NL;
-    for (I = 101; I <= LastMacro; I++)
+    for (I = ptnet_macroplace_first; I <= LastMacro; I++)
     {
       Plik << "MACROPLACE " << I << NL;
       Plik << "    Internal places      : ";
       Start = true;
-      for (J = 0; J <= 99; J++)
+      /* As in the original, place 100 is not listed. */
+      for (J = 0; J < ptnet_places_max; J++)
         if (contents[I].has(J))
           if (!Start)  Plik << ",P" << J;
           else
@@ -329,7 +321,7 @@ namespace graph {
       DTransfer = transfers;
       while (DTransfer != nil)
       {
-        for (J = 0; J <= 100; J++)
+        for (J = 0; J <= ptnet_places_max; J++)
           if ((DTransfer->InpPlc.has(J)) && (contents[I].has(J)))
             if (!Start)  Plik << ",T" << DTransfer->Nr;
             else
@@ -414,12 +406,13 @@ namespace graph {
     integer I, inp_, Out, Leav, Cln;
     ptnet_transitions_list_t DTrn;
 
-    for (I = 1; I <= 255; I++)
+    for (I = 1; I <= ptnet_places_t::max; I++)
     {
       if (transfers->InpPlc.has(I))  inp_ = I;
       if (transfers->OutPlc.has(I))  Out = I;
     }
-    if ((inp_ < 100) && (Out < 100))
+    /* As in the original, place 100 is not treated as an ordinary place here. */
+    if ((inp_ < ptnet_places_max) && (Out < ptnet_places_max))
     {
       LastMacro += 1;
       contents[LastMacro] = set::of(inp_, eos) + set::of(Out, eos);
@@ -431,7 +424,7 @@ namespace graph {
     else
       if (inp_ != Out)
       {
-        if ((inp_ > 100) && (Out > 100))
+        if ((inp_ > ptnet_places_max) && (Out > ptnet_places_max))
         {
           if (inp_ > Out)
           {
@@ -515,8 +508,8 @@ namespace graph {
     /* ... and a copy of net markings */
     petrinet.macronet_marking = petrinet.net_marking;
 
-    //for (I = 101; I <= 199; I++) contents[I] = set::of(eos);
-    //LastMacro = 100;
+    //for (I = ptnet_macroplace_first; I <= ptnet_macroplace_last; I++) contents[I] = set::of(eos);
+    //LastMacro = ptnet_macroplace_first - 1;
     for (ptnet_transitions_list_t::iterator it = petrinet.macronet.begin(); it != petrinet.macronet.end(); it++)
     {
       if (IsTransfer(*it))
